@@ -41,3 +41,7 @@ Thumbs.db
 # Generic databases
 *.db
 *.sqlite
+/assets
+/data
+/logs
+/releases
