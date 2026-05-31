@@ -1,0 +1,8 @@
+watchdog
+pillow
+jinja2
+pyyaml
+sqlalchemy
+rich
+typer
+python-dotenv

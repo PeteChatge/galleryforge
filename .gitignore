@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Env
+.venv/
+
+# Runtime
+runtime/cache/
+runtime/locks/
+runtime/sessions/
+
+# Logs
+logs/
+
+# Database
+data/*.db
+data/*.sqlite
+
+# Assets
+assets/
+
+# Releases
+releases/
+
+# Temp
+temp/
+
+# Secrets
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+# Generic databases
+*.db
+*.sqlite

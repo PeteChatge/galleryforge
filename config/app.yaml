@@ -1,0 +1,27 @@
+app:
+  name: GalleryForge
+  environment: development
+
+paths:
+  assets: /mnt/d/___memubot/assets
+  releases: /mnt/d/___memubot/releases
+  data: /mnt/d/___memubot/data
+  logs: /mnt/d/___memubot/logs
+
+release:
+  weekly_day: friday
+  timezone: Europe/Berlin
+
+thumbnails:
+  width: 512
+  quality: 90
+
+watcher:
+  recursive: true
+  video_extensions:
+    - .mp4
+    - .webm
+  image_extensions:
+    - .png
+    - .jpg
+    - .jpeg

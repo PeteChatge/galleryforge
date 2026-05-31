@@ -1,0 +1,14 @@
+[project]
+name = "galleryforge"
+version = "0.1.0"
+description = "AI Gallery Automation Pipeline"
+authors = [
+    {name = "Art Flowman"}
+]
+requires-python = ">=3.11"
+
+[tool.black]
+line-length = 88
+
+[tool.pytest.ini_options]
+pythonpath = "."
