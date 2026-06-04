@@ -1,0 +1,142 @@
+# ==========================================================
+# GalleryForge Development Environment
+# Stand: Milestone 1
+#
+# Projekt:
+# ComfyUI -> GalleryForge -> Releases -> HTML -> MemUBot
+#
+# Repository:
+# ~/galleryforge
+#
+# Daten:
+# /mnt/d/___memubot/
+# ==========================================================
+
+
+# ----------------------------------------------------------
+# Navigation
+# ----------------------------------------------------------
+
+alias gf='cd ~/galleryforge'
+
+alias gfroot='cd ~/galleryforge'
+alias gfassets='cd /mnt/d/___memubot/assets'
+alias gfdata='cd /mnt/d/___memubot/data'
+alias gfreleases='cd /mnt/d/___memubot/releases'
+alias gflogs='cd /mnt/d/___memubot/logs'
+
+
+# ----------------------------------------------------------
+# Python Environment
+# ----------------------------------------------------------
+
+alias gfvenv='source ~/galleryforge/.venv/bin/activate'
+
+# Start in project + activate venv
+alias gfstart='cd ~/galleryforge && source .venv/bin/activate'
+
+
+# ----------------------------------------------------------
+# Git
+# ----------------------------------------------------------
+
+alias gs='git status'
+alias gl='git log --oneline --graph --decorate'
+alias ga='git add .'
+alias gc='git commit -m'
+alias gp='git push'
+
+alias gfhistory='git log --oneline --graph --decorate --all'
+
+
+# ----------------------------------------------------------
+# SQLite
+# ----------------------------------------------------------
+
+alias gfdb='sqlite3 /mnt/d/___memubot/data/galleryforge.db'
+
+# Current schema
+alias gfschema='sqlite3 /mnt/d/___memubot/data/galleryforge.db ".schema assets"'
+
+# Show newest assets
+alias gfassetsql='sqlite3 /mnt/d/___memubot/data/galleryforge.db "SELECT id, filename, status FROM assets ORDER BY id DESC;"'
+
+
+# ----------------------------------------------------------
+# GalleryForge Modules
+# ----------------------------------------------------------
+
+# Config Loader
+alias gfconfig='python -m core.config_loader'
+
+# Logger
+alias gflogger='python -m core.logger'
+
+# Watch incoming assets
+alias gfwatch='python -m core.watcher'
+
+# Process NEW assets
+alias gfprocess='python -m core.process_new_assets'
+
+# Asset Registry
+alias gfregistry='python -m core.asset_registry'
+
+# Release Manager
+alias gfrelease='python -m core.release_manager'
+
+
+# ----------------------------------------------------------
+# Diagnostics
+# ----------------------------------------------------------
+
+alias gfthumbs='ls -lh /mnt/d/___memubot/assets/thumbnails'
+
+alias gfinbox='ls -lh /mnt/d/___memubot/assets/inbox'
+
+alias gftree='find ~/galleryforge -maxdepth 2 -type f | sort'
+
+
+# ----------------------------------------------------------
+# Milestone Documentation
+# ----------------------------------------------------------
+
+# Milestone 1 (completed)
+#
+# [x] WSL Debian
+# [x] Python venv
+# [x] Git Repository
+# [x] Config Loader
+# [x] Logger
+# [x] SQLite Database
+# [x] Asset Registry
+# [x] SHA256 Duplicate Detection
+# [x] Watchdog Watcher
+# [x] Thumbnail Generator
+# [x] Asset Processing Pipeline
+#
+# Workflow:
+#
+# ComfyUI
+#    ↓
+# assets/inbox
+#    ↓
+# watcher.py
+#    ↓
+# asset_registry.py
+#    ↓
+# process_new_assets.py
+#    ↓
+# thumbnails/
+#    ↓
+# status = THUMBNAILED
+#
+#
+# Upcoming:
+#
+# [ ] release_manager.py
+# [ ] gallery_builder.py
+# [ ] stash_exporter.py
+# [ ] patreon_exporter.py
+# [ ] memubot_connector.py
+#
+# ==========================================================
