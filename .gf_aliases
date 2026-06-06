@@ -34,7 +34,8 @@ alias gfvenv='source ~/galleryforge/.venv/bin/activate'
 
 # Start in project + activate venv
 alias gfstart='cd ~/galleryforge && source .venv/bin/activate'
-
+alias gfbuild='python -m core.gallery_builder'
+alias gfstats='python -m core.stats'
 
 # ----------------------------------------------------------
 # Git
@@ -46,8 +47,13 @@ alias ga='git add .'
 alias gc='git commit -m'
 alias gp='git push'
 
+# Git-Aliases (gf...) nur aus dem .venv von galleryforge
+alias gfstatus='git status'
+alias gflog='git log --oneline --decorate'
+alias gfgcom='git add . && git commit'
+alias gfcommit='git add . && git commit'
+alias gfsave='git add . && git commit -m'
 alias gfhistory='git log --oneline --graph --decorate --all'
-
 
 # ----------------------------------------------------------
 # SQLite
@@ -84,6 +90,17 @@ alias gfregistry='python -m core.asset_registry'
 # Release Manager
 alias gfrelease='python -m core.release_manager'
 
+# Content manager liest neue Inhalte ein
+alias gfthumbs='python -m core.process_new_assets'
+
+# Galerie wird neu eingelesen, aufgebaut
+alias gfbuild='python -m core.gallery_builder'
+
+# Abruf der Statistiken
+alias gfstats='python -m core.stats'
+
+# gehe zu  Projektordner
+alias gfcd='cd ~/galleryforge'
 
 # ----------------------------------------------------------
 # Diagnostics
@@ -140,3 +157,6 @@ alias gftree='find ~/galleryforge -maxdepth 2 -type f | sort'
 # [ ] memubot_connector.py
 #
 # ==========================================================
+# alle aliases jetzt in .gf_aliases.
+# die Datei .bashrc_galleryforge wurde aufgelöst.
+# =========================================================
