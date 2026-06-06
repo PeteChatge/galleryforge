@@ -1,5 +1,6 @@
 from pathlib import Path
 import shutil
+import json
 
 from core.release_manager import (
     create_release_id,
@@ -29,17 +30,71 @@ def build_gallery(release_id):
     thumbs_dir = (
         release_dir / "thumbnails"
     )
-
+    
+    images_dir = (
+        release_dir / "images"
+    )
+    
     thumbs_dir.mkdir(
         parents=True,
         exist_ok=True
     )
+    
+    images_dir.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+    
 
     html = [
+        "<!DOCTYPE html>",
         "<html>",
+        "<head>",
+        "<meta charset='utf-8'>",
+        f"<title>Release {release_id}</title>",
+        "<style>",
+        "body {",
+        "    font-family: Arial, sans-serif;",
+        "    background: #f0f0f0;",
+        "    margin: 20px;",
+        "}",
+        "h1 {",
+        "    text-align: center;",
+        "}",
+        ".gallery {",
+        "    display: grid;",
+        "    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));",
+        "    gap: 20px;",
+        "}",
+        ".card {",
+        "    background: white;",
+        "    border-radius: 10px;",
+        "    overflow: hidden;",
+        "    box-shadow: 0 2px 6px rgba(0,0,0,0.2);",
+        "}",
+        ".card img {",
+        "    width: 100%;",
+        "    display: block;",
+        "}",
+        ".card p {",
+        "    padding: 10px;",
+        "    margin: 0;",
+        "    text-align: center;",
+        "}",
+        "</style>",
+        "</head>",
         "<body>",
-        f"<h1>Release {release_id}</h1>"
+        f"<h1>Release {release_id}</h1>",
+        "<div class='gallery'>"
     ]
+
+    release_info = {
+            "release_id": release_id,
+            "asset_count": len(assets),
+            "status": "READY",
+            "generator": "GalleryForge",
+            "assets": []
+        }
 
     for asset in assets:
 
@@ -62,11 +117,40 @@ def build_gallery(release_id):
             thumb_target
         )
 
-        html.append(
-            f"<div><img src='thumbnails/{thumb_source.name}'></div>"
+        image_source = Path(filepath)
+        
+        image_target = (
+            images_dir /
+            image_source.name
         )
+        
+        shutil.copy2(
+            image_source,
+            image_target
+        )
+        
+        release_info["assets"].append(
+                    {
+                        "id": asset_id,
+                        "filename": filename,
+                        "thumbnail": f"thumbnails/{thumb_source.name}",
+                        "image": f"images/{image_source.name}"
+                    }
+                )        
 
+        html.append(
+            f"""
+            <div class="card">
+                <a href="images/{image_source.name}">
+                    <img src="thumbnails/{thumb_source.name}">
+                </a>
+                <p>{filename}</p>
+            </div>
+            """
+        )
+        
     html.extend([
+        "</div>",
         "</body>",
         "</html>"
     ])
@@ -77,6 +161,18 @@ def build_gallery(release_id):
 
     html_file.write_text(
         "\n".join(html),
+        encoding="utf-8"
+    )
+      
+    json_file = (
+        release_dir / "release.json"
+    )
+    
+    json_file.write_text(
+        json.dumps(
+            release_info,
+            indent=4
+        ),
         encoding="utf-8"
     )
 
