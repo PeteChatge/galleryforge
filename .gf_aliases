@@ -11,13 +11,11 @@
 # Daten:
 # /mnt/d/___memubot/
 # ==========================================================
-
-
+alias cls="clear"
+alias dir="ls -la"
 # ----------------------------------------------------------
 # Navigation
 # ----------------------------------------------------------
-
-alias gf='cd ~/galleryforge'
 
 alias gfroot='cd ~/galleryforge'
 alias gfassets='cd /mnt/d/___memubot/assets'

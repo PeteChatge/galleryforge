@@ -5,7 +5,10 @@ from core.asset_registry import (
     update_thumbnail
 )
 
-from core.thumbnailer import create_thumbnail
+from core.thumbnailer import (
+    create_thumbnail,
+    create_video_thumbnail
+)
 
 
 THUMBNAIL_DIR = Path(
@@ -26,6 +29,7 @@ def process_new_assets():
         asset_id = asset[0]
         filename = asset[1]
         filepath = asset[2]
+        asset_type = asset[3]
 
         source_path = Path(filepath)
 
@@ -42,11 +46,28 @@ def process_new_assets():
             f"{source_path.stem}.webp"
         )
 
-        create_thumbnail(
-            source_path,
-            thumbnail_path
-        )
-
+        if asset_type == "image":
+        
+            create_thumbnail(
+                source_path,
+                thumbnail_path
+            )
+        
+        elif asset_type == "video":
+        
+            create_video_thumbnail(
+                source_path,
+                thumbnail_path
+            )
+        
+        else:
+        
+            print(
+                f"Unsupported asset type: {asset_type}"
+            )
+        
+            continue
+            
         update_thumbnail(
             asset_id,
             str(thumbnail_path)

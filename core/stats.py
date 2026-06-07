@@ -22,6 +22,34 @@ def show_stats():
     print()
 
     total = 0
+    
+    cursor.execute(
+        """
+        SELECT release_id
+        FROM assets
+        WHERE release_id IS NOT NULL
+        ORDER BY release_id DESC
+        LIMIT 1
+        """
+    )
+    
+    row = cursor.fetchone()
+    
+    current_release = (
+        row[0]
+        if row
+        else "None"
+    )
+
+    cursor.execute(
+        """
+        SELECT COUNT(DISTINCT release_id)
+        FROM assets
+        WHERE release_id IS NOT NULL
+        """
+    )
+    
+    release_count = cursor.fetchone()[0]
 
     for status, count in rows:
         print(f"{status:20} {count}")
@@ -29,6 +57,10 @@ def show_stats():
 
     print()
     print(f"TOTAL ASSETS        {total}")
+
+    print()
+    print(f"TOTAL RELEASES     {release_count}")
+    print(f"CURRENT RELEASE    {current_release}")
 
     conn.close()
 
