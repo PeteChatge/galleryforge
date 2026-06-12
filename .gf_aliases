@@ -52,6 +52,10 @@ alias gfgcom='git add . && git commit'
 alias gfcommit='git add . && git commit'
 alias gfsave='git add . && git commit -m'
 alias gfhistory='git log --oneline --graph --decorate --all'
+alias gfpull='git pull'
+alias gfpush='git push'
+alias gflog='git log --oneline --graph --decorate'
+alias gfsync='git add . && git commit -m "sync" && git push'
 
 # ----------------------------------------------------------
 # SQLite

@@ -66,15 +66,13 @@ def get_release_assets(release_id):
 
 if __name__ == "__main__":
 
-    release_id = create_release_id()
-
-    assets = get_release_assets(
-        release_id
+    affected, release_id = (
+        assign_assets_to_release()
     )
+
+    print()
 
     print(
-        f"\nAssets in {release_id}:\n"
+        f"Assigned {affected} assets "
+        f"to release {release_id}"
     )
-
-    for asset in assets:
-        print(asset)
