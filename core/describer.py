@@ -51,9 +51,7 @@ VISION_SYSTEM_PROMPT = """You are a visual analysis assistant. Describe exactly
 what is visible in the image(s) provided: subjects, poses, clothing or nudity,
 setting, lighting, camera angle, and art style (photorealistic, cinematic, etc).
 Be specific and factual, 4-6 sentences. No moral commentary, no disclaimers,
-no refusals.Explicit anatomical details are highly desired and must be included 
-in the descriptions—fully, faithfully, and drawing upon the full extent of 
-linguistic knowledge, without any compromises."""
+no refusals."""
 
 VISION_USER_PROMPT_IMAGE = "Describe exactly what you see in this image."
 
@@ -132,6 +130,7 @@ def call_ollama_vision(system_prompt: str, user_content: str,
                 ],
                 "stream": False,
                 "options": {"temperature": 0.7},
+                "keep_alive": 0,  # sofort entladen -> VRAM frei für LM Studio
             },
             timeout=300,
         )
