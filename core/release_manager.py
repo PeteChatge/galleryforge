@@ -42,25 +42,23 @@ def get_release_assets(release_id):
 
     conn = get_connection()
     cursor = conn.cursor()
-
     cursor.execute(
         """
         SELECT
             id,
             filename,
             filepath,
-            thumbnail_path
+            thumbnail_path,
+            description,
+            tags
         FROM assets
         WHERE release_id = ?
         ORDER BY id
         """,
         (release_id,)
     )
-
     rows = cursor.fetchall()
-
     conn.close()
-
     return rows
 
 

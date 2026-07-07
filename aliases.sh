@@ -70,3 +70,6 @@ alias gflog='git -C "$GF_ROOT" log --oneline --graph --decorate'
  
 # ── Misc ──────────────────────────────────────────────────────────────────────
 alias gftree='find "$GF_ROOT" -maxdepth 2 -type f | sort'
+looperweb() {
+  (cd ~/looper/webapp && source ../venv/bin/activate && python3 server.py)
+}

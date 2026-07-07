@@ -12,6 +12,9 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 # ── Platform & Path Detection ─────────────────────────────────────────────────
+# GalleryForge Root
+export GF_ROOT="$HOME/galleryforge"
+
 if [ -n "$TERMUX_VERSION" ]; then
     # Android / Termux – data lives in Termux home, no Windows mounts
     GF_ROOT="$HOME/galleryforge/galleryforge"   # existing double-path on device
@@ -72,9 +75,66 @@ alias gfsave='git -C "$GF_ROOT" add . && git -C "$GF_ROOT" commit -m'
 alias gfsync='git -C "$GF_ROOT" add . && git -C "$GF_ROOT" commit -m "sync" && git -C "$GF_ROOT" push'
 alias gfhistory='git -C "$GF_ROOT" log --oneline --graph --decorate --all'
 alias gflog='git -C "$GF_ROOT" log --oneline --graph --decorate'
+alias gfdiff='git -C "$GF_ROOT" diff'
+alias gfbranch='git -C "GF_ROOT" branch'
+alias gfgraph='git -C "$GF_ROOT" log --graph --decorate --oneline --all'
+
 
 # ── Init (create data folder structure) ──────────────────────────────────────
 alias gfinit='mkdir -p "$GF_BASE"/{assets/{archive,inbox,processed,rejected,thumbnails},backups,data,docker,logs,models,releases/staging,temp} && echo "GalleryForge folders created under $GF_BASE"'
 
 # ── Misc ──────────────────────────────────────────────────────────────────────
 alias gftree='find "$GF_ROOT" -maxdepth 2 -type f | sort'
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+# ALIASES FUER DEN LOOPER
+# ende="curl -X POST http://192.168.1.131:18188/interrupt"
+# ende-hart="curl -X POST http://192.168.1.131:18188/interrupt && curl -X POST http://192.168.1.131:18188/queue -H" "Content-Type: application/json" -d "{\"clear\": true}"'
+# hardend="curl -X POST http://192.168.1.131:18188/interrupt && curl -X POST http://192.168.1.131:18188/queue" -H "Content-Type: application/json" -d "{\"clear\": true}"'
+# clearam="curl -X POST http://192.168.1.131:18188/free -H "Content-Type: application/json" -d '{"unload_models": true, "free_memory": true}'"
+# VRAM manuell freigeben (wan_circle.py macht das inzwischen automatisch vor/nach dem Loop)
+vram-frei='curl -X POST http://192.168.1.131:18188/free -H "Content-Type: application/json" -d "{\"unload_models\": true, \"free_memory\": true}"'
+vramfree='curl -X POST http://192.168.1.131:18188/free -H "Content-Type: application/json" -d "{\"unload_models\": true, \"free_memory\": true}"'
+### ====== LOOPER (WAN2.2 Circle-Loop) ======
+
+# Variante A: fester Alias mit Standard-Pfaden: /mnt/c/Users/Olaf/Downloads/loop-files/startbild.png UND prompts.csv
+# startbild.png und prompts.csv müssen genau SO benannt werden!
+loop='cd ~/looper && source venv/bin/activate && python3 wan_circle.py --start-image /mnt/c/Users/Olaf/Downloads/loop-files/startbild.png --prompts /mnt/c/Users/Olaf/Downloads/loop-files/prompts.csv --filename-prefix loopclip'
+
+# Variante B: Funktion mit optionalen Parametern (Startbild, Prompts-CSV, Filename-Prefix)
+# Nutzung:
+#   loopf                                          -> alle Defaults
+#   loopf /pfad/anderes_bild.png                   -> eigenes Startbild, Rest Default
+#   loopf /pfad/bild.png prompts/clip2.csv clip2   -> alles individuell
+loopf() {
+  local startbild="${1:-/mnt/c/Users/Olaf/Downloads/loop-files/startbild.png}"
+  local promptcsv="${2:-prompts/prompts.csv}"
+  local prefix="${3:-loopclip}"
+  (cd ~/looper && source venv/bin/activate && python3 wan_circle.py \
+    --start-image "$startbild" \
+    --prompts "$promptcsv" \
+    --filename-prefix "$prefix")
+}
+
+# Laufenden Sampling-Schritt in ComfyUI abbrechen (Skript selbst danach per Strg+C beenden)
+ende='curl -X POST http://192.168.1.131:18188/interrupt'
+
+# Wie "ende", aber leert zusaetzlich die Warteschlange
+ende-hart='curl -X POST http://192.168.1.131:18188/interrupt && curl -X POST http://192.168.1.131:18188/queue -H "Content-Type: application/json" -d "{\"clear\": true}"'

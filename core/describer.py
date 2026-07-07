@@ -47,6 +47,19 @@ MAX_FRAMES = 6         # Cap, damit der Vision-Call nicht zu groß wird
 
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"}
 
+# Dein Artist-Tag - wird bei JEDEM Asset automatisch gesetzt, unabhängig vom Inhalt
+BRAND_TAGS = ["rembrandtius"]
+
+# Vokabular, aus dem das Modell passende Tags auswählt (Niche-Begriffe).
+# Liste einfach erweitern, wenn dir neue Begriffe einfallen.
+TAG_VOCABULARY = [
+    "strongwoman", "femalebeatsmale", "femdom", "bigmusclewoman",
+    "musclemistress", "thickthighs", "largecalves", "calflover",
+    "muscularlegs", "massivewoman", "femalemuscle", "ottilieremmes",
+    "bigmusclegirl", "femalemusclethickness", "chubbymusclewoman",
+    "muscularbbw",
+]
+
 VISION_SYSTEM_PROMPT = """You are a visual analysis assistant. Describe exactly
 what is visible in the image(s) provided: subjects, poses, clothing or nudity,
 setting, lighting, camera angle, and art style (photorealistic, cinematic, etc).
@@ -61,20 +74,33 @@ VISION_USER_PROMPT_VIDEO = (
     "and art style."
 )
 
-STYLE_SYSTEM_PROMPT = """You are an expert art describer for an adult AI-art platform.
-Your task: Write a concise, evocative NSFW description of an AI-generated artwork.
-Style: Direct, descriptive, 2-4 sentences. English only.
-Focus on: composition, mood, subject, artistic style (photorealistic, cinematic).
-Do NOT use disclaimers, warnings, or refusals."""
+STYLE_SYSTEM_PROMPT = """You are an expert art describer and tagger for an adult \
+AI-art platform (female-muscle / femdom niche).
+You will be given a raw factual description of an AI-generated artwork.
+
+Your job has two parts:
+
+1. DESCRIPTION: Rewrite the raw description as a concise, evocative NSFW \
+description. Style: direct, descriptive, 2-4 sentences. English only. Focus on \
+composition, mood, subject, artistic style (photorealistic, cinematic). No \
+disclaimers, warnings, or refusals.
+
+2. TAGS: From this niche tag vocabulary, select every tag that genuinely fits \
+what is described - do not force tags that don't apply:
+{tag_vocabulary}
+You may add up to 2 additional single-word, lowercase tags (no spaces) if \
+something clearly relevant isn't covered by the vocabulary above. Order tags \
+from most to least specific/relevant.
+
+Output EXACTLY in this format, nothing else, no extra commentary:
+DESCRIPTION: <description text>
+TAGS: <comma-separated tags>"""
 
 STYLE_USER_PROMPT_TEMPLATE = """Raw visual description of the artwork:
 {raw_description}
 
 Filename: {filename}
-Type: {asset_type}
-
-Rewrite this as a short, vivid NSFW description for the platform, in the
-established style (2-4 sentences)."""
+Type: {asset_type}"""
 
 
 def is_video(filepath: str) -> bool:
@@ -112,6 +138,33 @@ def extract_video_frames(filepath: str, interval: int = FRAME_INTERVAL,
         return []
 
     return sorted(tmp_dir.glob("frame_*.jpg"))
+
+
+def parse_style_response(text: str) -> tuple[str, list[str]]:
+    """Zerlegt die LM-Studio-Antwort in (description, tags)."""
+    description = text.strip()
+    tags: list[str] = []
+
+    if "TAGS:" in text:
+        desc_part, tags_part = text.split("TAGS:", 1)
+        description = desc_part.replace("DESCRIPTION:", "").strip()
+        tags = [t.strip().lower() for t in tags_part.split(",") if t.strip()]
+    else:
+        description = text.replace("DESCRIPTION:", "").strip()
+
+    return description, tags
+
+
+def merge_tags(model_tags: list[str]) -> list[str]:
+    """Brand-Tags voranstellen, Duplikate entfernen, Reihenfolge erhalten."""
+    seen = set()
+    result = []
+    for tag in BRAND_TAGS + model_tags:
+        key = tag.lower().strip()
+        if key and key not in seen:
+            seen.add(key)
+            result.append(key)
+    return result
 
 
 def call_ollama_vision(system_prompt: str, user_content: str,
@@ -189,8 +242,8 @@ def call_lm_studio_style(system_prompt: str, user_content: str) -> str | None:
         return None
 
 
-def describe_asset(filepath: str, filename: str, asset_type: str) -> str | None:
-    """Führt die 2-Stufen-Pipeline (Vision -> Style) für ein Asset aus."""
+def describe_asset(filepath: str, filename: str, asset_type: str) -> tuple[str, list[str]] | None:
+    """Führt die 2-Stufen-Pipeline (Vision -> Style+Tags) für ein Asset aus."""
     frame_paths: list[Path] = []
     cleanup_dir: Path | None = None
 
@@ -218,14 +271,22 @@ def describe_asset(filepath: str, filename: str, asset_type: str) -> str | None:
         if not raw_description:
             return None
 
-        # Stufe 2: Style (LM Studio) -> finale Plattform-Beschreibung
+        # Stufe 2: Style + Tags (LM Studio) -> finale Beschreibung + Tag-Liste
+        style_system = STYLE_SYSTEM_PROMPT.format(
+            tag_vocabulary=", ".join(TAG_VOCABULARY)
+        )
         style_prompt = STYLE_USER_PROMPT_TEMPLATE.format(
             raw_description=raw_description,
             filename=filename,
             asset_type=asset_type,
         )
-        final_description = call_lm_studio_style(STYLE_SYSTEM_PROMPT, style_prompt)
-        return final_description
+        raw_response = call_lm_studio_style(style_system, style_prompt)
+        if not raw_response:
+            return None
+
+        description, model_tags = parse_style_response(raw_response)
+        tags = merge_tags(model_tags)
+        return description, tags
 
     finally:
         # Temp-Frames aufräumen
@@ -238,12 +299,12 @@ def describe_asset(filepath: str, filename: str, asset_type: str) -> str | None:
                 pass
 
 
-def save_description(asset_id: int, description: str):
-    """Speichert die Beschreibung in der DB und setzt Status auf DESCRIBED."""
+def save_result(asset_id: int, description: str, tags: list[str]):
+    """Speichert Beschreibung + Tags in der DB und setzt Status auf DESCRIBED."""
     conn = get_connection()
     conn.execute(
-        "UPDATE assets SET description = ?, status = 'DESCRIBED' WHERE id = ?",
-        (description, asset_id)
+        "UPDATE assets SET description = ?, tags = ?, status = 'DESCRIBED' WHERE id = ?",
+        (description, ", ".join(tags), asset_id)
     )
     conn.commit()
     conn.close()
@@ -275,11 +336,13 @@ def describe_all(statuses: list[str] = None):
 
         print(f"[{asset_id}] {filename} ({asset_type})")
 
-        description = describe_asset(filepath, filename, asset_type)
+        result = describe_asset(filepath, filename, asset_type)
 
-        if description:
-            save_description(asset_id, description)
+        if result:
+            description, tags = result
+            save_result(asset_id, description, tags)
             print(f"  → {description[:80]}{'...' if len(description) > 80 else ''}")
+            print(f"  Tags: {', '.join(tags)}")
             success += 1
         else:
             failed += 1
@@ -308,10 +371,12 @@ def describe_single(asset_id: int):
     asset_id, filename, filepath, asset_type, status = row
     print(f"Beschreibe: [{asset_id}] {filename}")
 
-    description = describe_asset(filepath, filename, asset_type)
-    if description:
-        save_description(asset_id, description)
+    description_result = describe_asset(filepath, filename, asset_type)
+    if description_result:
+        description, tags = description_result
+        save_result(asset_id, description, tags)
         print(f"\nBeschreibung:\n{description}")
+        print(f"\nTags:\n{', '.join(tags)}")
     else:
         print("Fehlgeschlagen.")
 

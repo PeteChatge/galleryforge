@@ -1,0 +1,120 @@
+{
+  "2": {
+    "inputs": {
+      "video": "output/____01.mp4",
+      "force_rate": 0,
+      "custom_width": 0,
+      "custom_height": 0,
+      "frame_load_cap": 0,
+      "skip_first_frames": 0,
+      "select_every_nth": 1,
+      "format": "AnimateDiff"
+    },
+    "class_type": "VHS_LoadVideoPath",
+    "_meta": {
+      "title": "Load Video (Path) 🎥🅥🅗🅢"
+    }
+  },
+  "279": {
+    "inputs": {
+      "brightness": 0,
+      "contrast": 0.8,
+      "saturation": 1,
+      "sharpness": 0.5,
+      "blur": 0,
+      "gaussian_blur": 0.2,
+      "edge_enhance": 0.25,
+      "detail_enhance": "true",
+      "image": [
+        "282",
+        0
+      ]
+    },
+    "class_type": "Image Filter Adjustments",
+    "_meta": {
+      "title": "Image Filter Adjustments"
+    }
+  },
+  "281": {
+    "inputs": {
+      "model_name": "4x-NMKD-YandereNeo.pth"
+    },
+    "class_type": "Upscale Model Loader",
+    "_meta": {
+      "title": "Upscale Model Loader"
+    }
+  },
+  "282": {
+    "inputs": {
+      "upscale_model": [
+        "281",
+        0
+      ],
+      "image": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "ImageUpscaleWithModel",
+    "_meta": {
+      "title": "Upscale Image (using Model)"
+    }
+  },
+  "283": {
+    "inputs": {
+      "frame_rate": 24,
+      "loop_count": 0,
+      "filename_prefix": "AnimateDiff",
+      "format": "video/h264-mp4",
+      "pix_fmt": "yuv420p",
+      "crf": 12,
+      "save_metadata": true,
+      "trim_to_audio": false,
+      "pingpong": false,
+      "save_output": true,
+      "images": [
+        "286",
+        0
+      ]
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "Video Combine 🎥🅥🅗🅢"
+    }
+  },
+  "286": {
+    "inputs": {
+      "intensity": 0.01,
+      "grain_size": 0.5,
+      "colored": false,
+      "color_amount": 0.4,
+      "shadows_boost": 1,
+      "seed": 170375684,
+      "image": [
+        "289",
+        0
+      ]
+    },
+    "class_type": "FilmGrain",
+    "_meta": {
+      "title": "🎞️ Film Grain"
+    }
+  },
+  "289": {
+    "inputs": {
+      "ckpt_name": "rife49.pth",
+      "multiplier": 4,
+      "scale_factor": 1,
+      "ensemble": true,
+      "clear_cache_after_n_frames": 12,
+      "frames": [
+        "279",
+        0
+      ]
+    },
+    "class_type": "RIFE_VFI_Opt",
+    "_meta": {
+      "title": "🐇 RIFE VFI Interpolate by Multiple"
+    }
+  }
+}
