@@ -634,6 +634,53 @@ def buzzer():
     return jsonify({"job_id": jid})
 
 
+def _run_rebuild(jid):
+    from core import gallery_builder as _gb
+
+    steps = ["rebuild"]
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        weeks = [
+            r[0]
+            for r in conn.execute(
+                "SELECT DISTINCT release_id FROM assets"
+                " WHERE release_id IS NOT NULL AND release_id != ''"
+                " ORDER BY release_id"
+            ).fetchall()
+        ]
+        conn.close()
+        ok, fail = 0, 0
+        for i, wk in enumerate(weeks, 1):
+            _job_update(jid, step="rebuild", step_idx=1, steps=steps,
+                         current=i, total=max(1, len(weeks)),
+                         msg=f"Baue {wk} neu ({i}/{len(weeks)}) ...")
+            try:
+                _call_quiet(jid, _gb.build_gallery, wk)
+                ok += 1
+            except Exception as e:
+                fail += 1
+                _job_update(jid, msg=f"Build-Fehler {wk}: {type(e).__name__}: {e}")
+        _job_update(jid, done=True, current=1, total=1,
+                     msg=f"Rebuild fertig: {ok} ok, {fail} Fehler.")
+    except Exception as e:
+        _job_update(jid, done=True, error=f"{type(e).__name__}: {e}",
+                     msg=f"ABBRUCH: {e}")
+
+
+@app.post("/api/rebuild")
+def rebuild():
+    jid = uuid.uuid4().hex[:12]
+    with jlock:
+        jobs[jid] = {"step": "start", "step_idx": 0,
+                      "steps": ["rebuild"],
+                      "current": 0, "total": 1, "msg": "Start ...",
+                      "log": [], "done": False, "error": None,
+                      "started_at": time.time()}
+    t = threading.Thread(target=_run_rebuild, args=(jid,), daemon=True)
+    t.start()
+    return jsonify({"job_id": jid})
+
+
 @app.get("/api/job/<jid>")
 def job(jid):
     with jlock:

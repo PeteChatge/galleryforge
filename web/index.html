@@ -125,6 +125,9 @@ pre.log{background:#04060c;border:1px solid var(--line);border-radius:12px;paddi
 
 <div class="panel">
   <h2>Wochen-Galerien</h2>
+  <div class="row" style="margin-bottom:8px">
+    <button class="s ed" id="rebuild" style="flex:0 0 200px">Galerien neu bauen</button>
+  </div>
   <div id="rels"></div>
 </div>
 
@@ -215,11 +218,11 @@ function pollJob(job_id,busyBtn,busyLabel,doneLabel){
       $("joblog").textContent=j.log.slice(-40).join("\n"); $("joblog").scrollTop=1e6;
       if(j.done){ clearInterval(polling); polling=null;
         $("buzz").disabled=false; $("buzz").classList.remove("live"); $("buzz").textContent="▶ BUZZERN";
-        $("backfill").disabled=false; boot();
+        $("backfill").disabled=false; $("rebuild").disabled=false; boot();
         $("step").innerHTML=j.error?`Fehler: ${short(j.error,90)}`:doneLabel; }
     }catch(e){ clearInterval(polling); polling=null;
       $("buzz").disabled=false; $("buzz").classList.remove("live"); $("buzz").textContent="▶ BUZZERN";
-      $("backfill").disabled=false; }
+      $("backfill").disabled=false; $("rebuild").disabled=false; }
   },2000);
 }
 $("buzz").onclick=async()=>{
@@ -232,12 +235,20 @@ $("buzz").onclick=async()=>{
   }catch(e){ b.disabled=false; $("backfill").disabled=false; b.classList.remove("live"); b.textContent="▶ BUZZERN"; }
 };
 $("backfill").onclick=async()=>{
-  const b=$("backfill"); b.disabled=true; $("buzz").disabled=true;
+  const b=$("backfill"); b.disabled=true; $("buzz").disabled=true; $("rebuild").disabled=true;
   $("buzz").classList.add("live"); $("buzz").textContent="⏳ HOLT NACH …";
   try{
     const r=await api("/api/backfill",{method:"POST"}); const {job_id}=await r.json();
     pollJob(job_id,b,"⏳ HOLT NACH …","Nachholen fertig.");
-  }catch(e){ b.disabled=false; $("buzz").disabled=false; $("buzz").classList.remove("live"); $("buzz").textContent="▶ BUZZERN"; }
+  }catch(e){ b.disabled=false; $("buzz").disabled=false; $("rebuild").disabled=false; $("buzz").classList.remove("live"); $("buzz").textContent="▶ BUZZERN"; }
+};
+$("rebuild").onclick=async()=>{
+  const b=$("rebuild"); b.disabled=true; $("buzz").disabled=true; $("backfill").disabled=true;
+  $("buzz").classList.add("live"); $("buzz").textContent="⏳ BAUT …";
+  try{
+    const r=await api("/api/rebuild",{method:"POST"}); const {job_id}=await r.json();
+    pollJob(job_id,b,"⏳ BAUT …","Galerien neu gebaut.");
+  }catch(e){ b.disabled=false; $("buzz").disabled=false; $("backfill").disabled=false; $("buzz").classList.remove("live"); $("buzz").textContent="▶ BUZZERN"; }
 };
 boot(); setInterval(loadLogs,15000);
 </script>
