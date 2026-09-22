@@ -713,5 +713,8 @@ def job(jid):
 
 
 if __name__ == "__main__":
-    print(f"GalleryForge Web: http://0.0.0.0:{PORT}/  (Token in .env: GF_TOKEN)")
+    try:
+        print(f"GalleryForge Web: http://0.0.0.0:{PORT}/  (Token in .env: GF_TOKEN)")
+    except BrokenPipeError:
+        pass  # Hintergrundstart ohne Konsole
     app.run(host="0.0.0.0", port=PORT, threaded=True)
