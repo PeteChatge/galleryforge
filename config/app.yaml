@@ -25,3 +25,10 @@ watcher:
     - .png
     - .jpg
     - .jpeg
+
+describer:
+  ollama_url: http://127.0.0.1:11434/api/chat
+  vision_model: huihui_ai/qwen3-vl-abliterated:8b
+  lm_studio_url: http://127.0.0.1:18899/v1/chat/completions
+  text_model: qwen2.5-coder-14b-instruct-abliterated
+  text_fallback_model: qwen35-huihui:latest

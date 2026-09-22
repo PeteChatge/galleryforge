@@ -29,17 +29,32 @@ import requests
 from core.database import get_connection
 from core.asset_registry import get_assets_by_status
 
-# Ollama läuft auf dem Windows-PC (Stufe 1: Vision)
-OLLAMA_URL = "http://192.168.1.131:11434/api/chat"
+# Endpunkte/Modelle kommen aus config/app.yaml (describer:), mit Fallbacks.
+# Stufe 1 (Vision): Ollama mit Vision-Modell (Original-Rezept:
+# huihui_ai/qwen3-vl-abliterated:8b). Stufe 2 (Style+Tags): zuerst LM Studio,
+# bei Ausfall automatisch Ollama-Fallback mit abliteriertem Text-Modell.
+try:
+    from core.config_loader import load_config as _load_cfg
+
+    _cfg = _load_cfg() or {}
+except Exception:
+    _cfg = {}
+_d = (_cfg.get("describer") or {})
+
+# Ollama (Stufe 1: Vision + Stufe-2-Fallback)
+OLLAMA_URL = _d.get("ollama_url", "http://127.0.0.1:11434/api/chat")
 
 # Vision-Modell für Stufe 1 - exakter Tag wie in `ollama list`!
-VISION_MODEL = "huihui_ai/qwen3-vl-abliterated:8b"
+VISION_MODEL = _d.get("vision_model", "huihui_ai/qwen3-vl-abliterated:8b")
 
-# LM Studio läuft ebenfalls auf dem Windows-PC (Stufe 2: Style-Rewrite)
-# Genutzt, weil qwen2.5-coder-14b-instruct-abliterated nur als GGUF in
-# LM Studio liegt, nicht in Ollama importiert ist.
-LM_STUDIO_URL = "http://192.168.1.131:18899/v1/chat/completions"
-TEXT_MODEL = "qwen2.5-coder-14b-instruct-abliterated"
+# LM Studio (Stufe 2: Style-Rewrite, Text only)
+LM_STUDIO_URL = _d.get(
+    "lm_studio_url", "http://127.0.0.1:18899/v1/chat/completions"
+)
+TEXT_MODEL = _d.get("text_model", "qwen2.5-coder-14b-instruct-abliterated")
+
+# Ollama-Fallback für Stufe 2, wenn LM Studio aus ist (abliteriert!).
+TEXT_FALLBACK_MODEL = _d.get("text_fallback_model", "qwen35-huihui:latest")
 
 # Video-Frame-Extraktion
 FRAME_INTERVAL = 20   # jeder 20. Frame, wie in deinem HTML-Tool
@@ -193,7 +208,7 @@ def call_ollama_vision(system_prompt: str, user_content: str,
 
     except requests.exceptions.ConnectionError:
         print(f"  FEHLER: Ollama nicht erreichbar unter {OLLAMA_URL}")
-        print("  → Prüfe: curl http://192.168.1.131:11434/api/tags")
+        print("  → Prüfe: curl http://127.0.0.1:11434/api/tags")
         return None
     except requests.exceptions.HTTPError as e:
         print(f"  FEHLER: Ollama {e.response.status_code}: {e.response.text[:200]}")
@@ -242,6 +257,44 @@ def call_lm_studio_style(system_prompt: str, user_content: str) -> str | None:
         return None
 
 
+def call_ollama_text(system_prompt: str, user_content: str) -> str | None:
+    """Ollama /api/chat Call ohne Bilder (Stufe-2-Fallback, Text only)."""
+    try:
+        response = requests.post(
+            OLLAMA_URL,
+            json={
+                "model": TEXT_FALLBACK_MODEL,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_content},
+                ],
+                "stream": False,
+                "options": {"temperature": 0.7},
+                "keep_alive": 0,  # sofort entladen -> VRAM frei
+            },
+            timeout=300,
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data["message"]["content"].strip()
+
+    except requests.exceptions.ConnectionError:
+        print(f"  FEHLER: Ollama nicht erreichbar unter {OLLAMA_URL}")
+        return None
+    except Exception as e:
+        print(f"  FEHLER: Ollama-Fallback {type(e).__name__}: {e}")
+        return None
+
+
+def style_rewrite(system_prompt: str, user_content: str) -> str | None:
+    """Stufe 2 mit Fallback-Kette: LM Studio -> Ollama (abliteriert)."""
+    raw_response = call_lm_studio_style(system_prompt, user_content)
+    if raw_response:
+        return raw_response
+    print(f"  → LM Studio aus, Fallback: Ollama '{TEXT_FALLBACK_MODEL}' ...")
+    return call_ollama_text(system_prompt, user_content)
+
+
 def describe_asset(filepath: str, filename: str, asset_type: str) -> tuple[str, list[str]] | None:
     """Führt die 2-Stufen-Pipeline (Vision -> Style+Tags) für ein Asset aus."""
     frame_paths: list[Path] = []
@@ -271,7 +324,7 @@ def describe_asset(filepath: str, filename: str, asset_type: str) -> tuple[str, 
         if not raw_description:
             return None
 
-        # Stufe 2: Style + Tags (LM Studio) -> finale Beschreibung + Tag-Liste
+        # Stufe 2: Style + Tags (LM Studio, Fallback Ollama) -> Beschreibung + Tags
         style_system = STYLE_SYSTEM_PROMPT.format(
             tag_vocabulary=", ".join(TAG_VOCABULARY)
         )
@@ -280,7 +333,7 @@ def describe_asset(filepath: str, filename: str, asset_type: str) -> tuple[str, 
             filename=filename,
             asset_type=asset_type,
         )
-        raw_response = call_lm_studio_style(style_system, style_prompt)
+        raw_response = style_rewrite(style_system, style_prompt)
         if not raw_response:
             return None
 

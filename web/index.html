@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>GalleryForge</title>
+<style>
+:root{
+  --bg:#070a12; --bg2:#0b1020; --card:#101828; --card2:#0d1424;
+  --line:#1e2a44; --txt:#e8eefc; --dim:#8b98b8;
+  --neon:#00f0ff; --neon2:#b537ff; --ok:#00ffa3; --warn:#ffb300; --bad:#ff3b6b;
+  --r:16px;
+}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;padding:0;background:radial-gradient(1200px 600px at 20% -10%,#10203c 0%,var(--bg) 55%) fixed,var(--bg);color:var(--txt);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{padding:14px 14px 60px;max-width:1200px;margin:0 auto;overflow-x:hidden}
+h1{font-size:20px;margin:4px 0 2px;letter-spacing:.5px;text-shadow:0 0 18px rgba(0,240,255,.45)}
+.sub{color:var(--dim);font-size:12.5px;margin:0 0 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.panel{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.01)),var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin:12px 0;box-shadow:0 10px 30px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.07);transform:perspective(900px) rotateX(.4deg);overflow:hidden}
+.panel h2{font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin:0 0 10px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.buzzer{flex:1 1 220px;cursor:pointer;border:1px solid rgba(0,240,255,.6);border-radius:18px;padding:16px;font-size:18px;font-weight:800;letter-spacing:1px;color:#02131a;background:linear-gradient(180deg,#7df9ff,#00d5f2 45%,#0093c4);box-shadow:0 0 0 1px rgba(0,240,255,.35),0 0 24px rgba(0,240,255,.55),0 12px 30px rgba(0,0,0,.55),inset 0 2px 2px rgba(255,255,255,.7),inset 0 -6px 14px rgba(0,60,90,.45);text-shadow:0 1px 0 rgba(255,255,255,.5);transform:perspective(600px) translateZ(8px);transition:transform .12s,box-shadow .12s;max-width:100%}
+.buzzer:active{transform:perspective(600px) translateZ(0) scale(.98)}
+.buzzer:disabled{filter:grayscale(.6) brightness(.7);cursor:wait}
+.buzzer.live{border-color:var(--neon2);box-shadow:0 0 0 1px var(--neon2),0 0 30px var(--neon2),0 12px 30px rgba(0,0,0,.6),inset 0 2px 2px rgba(255,255,255,.6)}
+.bar{height:14px;border-radius:99px;background:#05080f;border:1px solid var(--line);overflow:hidden;margin-top:10px;box-shadow:inset 0 2px 6px #000}
+.bar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--neon),var(--neon2));box-shadow:0 0 14px var(--neon);transition:width .3s}
+.step{font-size:12.5px;color:var(--dim);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.step b{color:var(--neon);text-shadow:0 0 10px var(--neon)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.stat{background:linear-gradient(180deg,#0e1830,#0a1122);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 6px 16px rgba(0,0,0,.4);overflow:hidden}
+.stat b{display:block;font-size:20px;text-shadow:0 0 12px rgba(0,240,255,.6)}
+.stat span{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok);margin-right:6px;vertical-align:baseline}
+.dot.off{background:var(--bad);box-shadow:0 0 10px var(--bad)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.05),transparent 30%),var(--card2);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 8px 22px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06);transform:perspective(800px) rotateX(.3deg);max-width:100%}
+.card img{width:100%;height:150px;object-fit:cover;display:block;background:#000}
+.card .bd{padding:8px 10px}
+.nm{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta{font-size:11.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.6px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);margin:6px 6px 0 0;white-space:nowrap}
+.b-NEW{color:var(--neon);border-color:var(--neon);box-shadow:0 0 10px rgba(0,240,255,.5)}
+.b-DESCRIBED{color:#c9a6ff;border-color:var(--neon2);box-shadow:0 0 10px rgba(181,55,255,.5)}
+.b-THUMBNAILED{color:var(--warn);border-color:var(--warn)}
+.b-READY_FOR_RELEASE{color:var(--ok);border-color:var(--ok);box-shadow:0 0 10px rgba(0,255,163,.5)}
+.b-REJECTED{color:var(--bad);border-color:var(--bad)}
+.abtns{display:flex;gap:6px;margin-top:8px}
+button.s{flex:1;min-width:0;border-radius:10px;border:1px solid var(--line);background:#16203a;color:var(--txt);padding:7px 4px;font-size:12px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+button.s.ok{border-color:var(--ok);box-shadow:0 0 8px rgba(0,255,163,.35)}
+button.s.no{border-color:var(--bad)}
+button.s.ed{border-color:var(--neon)}
+input,select,textarea{width:100%;max-width:100%;background:#05080f;border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:9px;font-size:14px}
+textarea{resize:vertical;min-height:56px}
+.toolbar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.rel{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:9px 10px;margin:6px 0;background:#0b1326;overflow:hidden}
+.rel a{color:var(--neon);font-weight:700;white-space:nowrap}
+.rel span{color:var(--dim);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+pre.log{background:#04060c;border:1px solid var(--line);border-radius:12px;padding:10px;font-size:11.5px;max-height:220px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+#login{position:sticky;top:0;z-index:5}
+.err{color:var(--bad);font-size:12.5px;min-height:18px}
+.pager{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:10px}
+@media (max-width:640px){
+  body{padding:10px 10px 50px}
+  .grid{grid-template-columns:1fr}
+  .toolbar{grid-template-columns:1fr}
+  .card img{height:190px}
+  h1{font-size:18px}
+  .buzzer{font-size:17px}
+}
+</style>
+</head>
+<body>
+<h1>⬢ GalleryForge</h1>
+<p class="sub" id="hostline">WSL · Flask · Port 15001 · LAN/WireGuard + Token</p>
+
+<div class="panel" id="login">
+  <h2>Zugang (Token, kein Login)</h2>
+  <div class="row">
+    <input id="tok" type="password" placeholder="GF_TOKEN einfügen" autocomplete="off" style="flex:1">
+    <button class="s ed" id="saveTok" style="flex:0 0 110px">Speichern</button>
+  </div>
+  <div class="err" id="authErr"></div>
+</div>
+
+<div class="panel">
+  <h2><span class="dot" id="dot"></span>Buzzer – alles auf einmal</h2>
+  <div class="row">
+    <button class="buzzer" id="buzz">▶ BUZZERN</button>
+  </div>
+  <div class="bar"><i id="fill"></i></div>
+  <div class="step" id="step">Bereit: Scan → Beschreiben → Thumbs → Release → Build</div>
+  <pre class="log" id="joblog" style="max-height:140px"></pre>
+</div>
+
+<div class="panel">
+  <h2>Stats</h2>
+  <div class="stats" id="stats"></div>
+  <div class="row" style="margin-top:10px">
+    <button class="s" id="reload">↻ Aktualisieren</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Assets (kuratieren)</h2>
+  <div class="toolbar">
+    <select id="fStatus">
+      <option value="">Alle Status</option>
+      <option>NEW</option><option>DESCRIBED</option><option>THUMBNAILED</option>
+      <option>READY_FOR_RELEASE</option><option>REJECTED</option>
+    </select>
+    <input id="fQ" placeholder="Suche (Datei/Descr./Tags)">
+  </div>
+  <div class="grid" id="assets"></div>
+  <div class="pager">
+    <button class="s" id="prev">‹ Zurück</button>
+    <span class="meta" id="pginfo"></span>
+    <button class="s" id="next">Weiter ›</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Wochen-Galerien</h2>
+  <div id="rels"></div>
+</div>
+
+<div class="panel">
+  <h2>Logs</h2>
+  <pre class="log" id="logs"></pre>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let page=1; const per=30;
+const tokStore={get:()=>localStorage.getItem("gf_token")||"",set:v=>localStorage.setItem("gf_token",v)};
+function syncCookie(){const t=tokStore.get();if(t)document.cookie="gf_token="+encodeURIComponent(t)+";path=/;max-age=31536000;SameSite=Lax";}
+if(tokStore.get()){ $("tok").value=tokStore.get(); syncCookie(); }
+$("saveTok").onclick=()=>{tokStore.set($("tok").value.trim());syncCookie();$("authErr").textContent="";boot();};
+async function api(path,opt={}){
+  const r=await fetch(path,{...opt,headers:{...(opt.headers||{}),"Authorization":"Bearer "+tokStore.get(),"Content-Type":"application/json"}});
+  if(r.status===401){$("authErr").textContent="Token falsch – oben GF_TOKEN einfügen.";$("dot").classList.add("off");throw new Error("unauth");}
+  return r;
+}
+function short(s,n=34){s=s||"";return s.length>n?s.slice(0,n-1)+"…":s;}
+async function boot(){await Promise.all([loadStats(),loadAssets(),loadRels(),loadLogs()]).catch(()=>{});}
+async function loadStats(){
+  const r=await api("/api/stats"); const j=await r.json();
+  $("dot").classList.toggle("off",false);
+  const order=["NEW","DESCRIBED","THUMBNAILED","READY_FOR_RELEASE","REJECTED"];
+  let h=`<div class="stat"><b>${j.total}</b><span>Total</span></div><div class="stat"><b>${j.inbox_files}</b><span>Inbox</span></div><div class="stat"><b>${j.releases}</b><span>Releases</span></div>`;
+  for(const k of order) h+=`<div class="stat"><b>${j.by_status[k]||0}</b><span>${short(k,12)}</span></div>`;
+  if(j.current_release) h+=`<div class="stat"><b style="font-size:15px">${j.current_release}</b><span>Aktuell</span></div>`;
+  $("stats").innerHTML=h;
+}
+function thumbURL(id){return `/api/thumb/${id}`;}
+async function loadAssets(){
+  const st=$("fStatus").value,q=$("fQ").value.trim();
+  const r=await api(`/api/assets?status=${encodeURIComponent(st)}&q=${encodeURIComponent(q)}&page=${page}&per_page=${per}`);
+  const j=await r.json();
+  $("pginfo").textContent=`${j.total} · S.${j.page}`;
+  const g=$("assets"); g.innerHTML="";
+  for(const a of j.items){
+    const card=document.createElement("div"); card.className="card";
+    const img=document.createElement("img"); img.alt=""; img.loading="lazy";
+    if(a.has_thumb){ try{ const tr=await fetch(thumbURL(a.id),{headers:{"Authorization":"Bearer "+tokStore.get()}}); if(tr.ok){ const b=await tr.blob(); img.src=URL.createObjectURL(b);} }catch(e){} }
+    const bd=document.createElement("div"); bd.className="bd";
+    bd.innerHTML=`<div class="nm" title="${(a.filename||"").replace(/"/g,"")}">${short(a.filename,30)}</div>
+      <div class="meta">#${a.id} · ${a.asset_type} · ${short(a.week||a.release_id||"",14)}</div>
+      <div class="meta" title="${(a.tags||"").replace(/"/g,"")}">${short(a.tags||"– keine Tags –",40)}</div>
+      <span class="badge b-${a.status}">${short(a.status,16)}</span>`;
+    const btns=document.createElement("div"); btns.className="abtns";
+    const bE=document.createElement("button"); bE.className="s ed"; bE.textContent="Edit";
+    bE.onclick=async()=>{ const nd=prompt("Beschreibung:",a.description||""); if(nd===null)return; const nt=prompt("Tags (Komma):",a.tags||""); if(nt===null)return;
+      await api(`/api/assets/${a.id}`,{method:"PATCH",body:JSON.stringify({description:nd,tags:nt})}); loadAssets(); };
+    const bO=document.createElement("button"); bO.className="s ok"; bO.textContent="✓";
+    bO.onclick=async()=>{ await api(`/api/assets/${a.id}/approve`,{method:"POST"}); loadAssets(); loadStats(); };
+    const bN=document.createElement("button"); bN.className="s no"; bN.textContent="✗";
+    bN.onclick=async()=>{ if(!confirm(`Ablehnen: ${a.filename}? → rejected/`))return; await api(`/api/assets/${a.id}/reject`,{method:"POST"}); loadAssets(); loadStats(); };
+    btns.append(bE,bO,bN); bd.append(btns); card.append(img,bd); g.append(card);
+  }
+  if(!j.items.length) g.innerHTML='<div class="meta">Keine Assets – Buzzer drücken.</div>';
+}
+$("prev").onclick=()=>{if(page>1){page--;loadAssets();}};
+$("next").onclick=()=>{page++;loadAssets();};
+$("reload").onclick=boot;
+$("fStatus").onchange=()=>{page=1;loadAssets();};
+let qT; $("fQ").oninput=()=>{clearTimeout(qT);qT=setTimeout(()=>{page=1;loadAssets();},350);};
+async function loadRels(){
+  const r=await api("/api/releases"); const j=await r.json();
+  $("rels").innerHTML=j.releases.map(x=>`<div class="rel"><a href="/releases/${x.id}/index.html?token=${encodeURIComponent(tokStore.get())}" target="_blank">${x.id}</a><span>${x.assets} Assets${x.has_index?"":" · kein index"}</span></div>`).join("")||'<div class="meta">Noch keine Releases.</div>';
+}
+async function loadLogs(){
+  try{ const r=await api("/api/logs?lines=80"); const j=await r.json(); $("logs").textContent=j.lines.join("\n"); }catch(e){}
+}
+let polling=null;
+$("buzz").onclick=async()=>{
+  const b=$("buzz"); b.disabled=true; b.classList.add("live"); b.textContent="⏳ LÄUFT …";
+  $("joblog").textContent="";
+  try{
+    const r=await api("/api/buzzer",{method:"POST"}); const {job_id}=await r.json();
+    polling=setInterval(async()=>{
+      try{
+        const jr=await api(`/api/job/${job_id}`); const j=await jr.json();
+        const pct=j.total?Math.round(100*j.current/j.total):0;
+        const overall=Math.round(100*((j.step_idx-1)+pct/100)/j.steps.length);
+        $("fill").style.width=overall+"%";
+        $("step").innerHTML=`<b>${short(j.step,18)}</b> · ${j.current}/${j.total} · ${short(j.msg,70)}`;
+        $("joblog").textContent=j.log.slice(-40).join("\n"); $("joblog").scrollTop=1e6;
+        if(j.done){ clearInterval(polling); b.disabled=false; b.classList.remove("live"); b.textContent="▶ BUZZERN"; boot();
+          $("step").innerHTML=j.error?`Fehler: ${short(j.error,90)}`:"Fertig. Stats/Galerien aktualisiert."; }
+      }catch(e){ clearInterval(polling); b.disabled=false; b.classList.remove("live"); b.textContent="▶ BUZZERN"; }
+    },2000);
+  }catch(e){ b.disabled=false; b.classList.remove("live"); b.textContent="▶ BUZZERN"; }
+};
+boot(); setInterval(loadLogs,15000);
+</script>
+</body>
+</html>
