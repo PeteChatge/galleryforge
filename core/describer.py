@@ -58,7 +58,7 @@ TEXT_FALLBACK_MODEL = _d.get("text_fallback_model", "qwen35-huihui:latest")
 
 # Video-Frame-Extraktion
 FRAME_INTERVAL = 20   # jeder 20. Frame, wie in deinem HTML-Tool
-MAX_FRAMES = 6         # Cap, damit der Vision-Call nicht zu groß wird
+MAX_FRAMES = 3         # Cap: 3 Frames reichen für Tags/Stimmung, 6 war zu langsam
 
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"}
 

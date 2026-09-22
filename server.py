@@ -402,6 +402,7 @@ def _job_update(jid, **kw):
         if j is None:
             return
         j.update(kw)
+        j["updated_at"] = time.time()
         if "msg" in kw:
             j["log"].append(f"[{kw.get('step', j.get('step', ''))}] {kw['msg']}")
             j["log"] = j["log"][-300:]
@@ -679,6 +680,27 @@ def rebuild():
     t = threading.Thread(target=_run_rebuild, args=(jid,), daemon=True)
     t.start()
     return jsonify({"job_id": jid})
+
+
+@app.get("/api/jobs")
+def jobs_list():
+    with jlock:
+        return jsonify(
+            {
+                jid: {
+                    "step": j.get("step"),
+                    "step_idx": j.get("step_idx"),
+                    "current": j.get("current"),
+                    "total": j.get("total"),
+                    "msg": (j.get("msg") or "")[:200],
+                    "log_tail": j.get("log", [])[-15:],
+                    "done": j.get("done"),
+                    "error": j.get("error"),
+                    "updated_at": j.get("updated_at"),
+                }
+                for jid, j in jobs.items()
+            }
+        )
 
 
 @app.get("/api/job/<jid>")
