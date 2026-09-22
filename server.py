@@ -566,6 +566,60 @@ def _run_buzzer(jid):
                      msg=f"ABBRUCH: {e}")
 
 
+@app.get("/api/missing")
+def missing():
+    conn = db()
+    n = conn.execute(
+        "SELECT COUNT(*) c FROM assets WHERE status = 'READY_FOR_RELEASE'"
+        " AND (description IS NULL OR description = '')"
+    ).fetchone()["c"]
+    conn.close()
+    return jsonify({"missing": n})
+
+
+def _run_backfill(jid):
+    from core import describer as _desc
+
+    steps = ["nachholen"]
+    try:
+        todo = _desc.get_missing_descriptions()
+        ok, fail = 0, 0
+        for i, a in enumerate(todo, 1):
+            aid, fn, fp, at = a[0], a[1], a[2], a[3]
+            _job_update(jid, step="nachholen", step_idx=1, steps=steps,
+                         current=i, total=max(1, len(todo)),
+                         msg=f"Hole nach [{aid}] {fn} ({i}/{len(todo)})")
+            try:
+                res = _call_quiet(jid, _desc.describe_asset, fp, fn, at)
+            except Exception as e:
+                res = None
+                _job_update(jid, msg=f"Fehler bei [{aid}]: {type(e).__name__}")
+            if res:
+                _desc.save_backfill(aid, res[0], res[1])
+                ok += 1
+            else:
+                fail += 1
+        _job_update(jid, done=True, current=1, total=1,
+                     msg=f"Nachgeholt: {ok} ok, {fail} übersprungen.")
+    except Exception as e:
+        _job_update(jid, done=True, error=f"{type(e).__name__}: {e}",
+                     msg=f"ABBRUCH: {e}")
+
+
+@app.post("/api/backfill")
+def backfill():
+    jid = uuid.uuid4().hex[:12]
+    with jlock:
+        jobs[jid] = {"step": "start", "step_idx": 0,
+                      "steps": ["nachholen"],
+                      "current": 0, "total": 1, "msg": "Start ...",
+                      "log": [], "done": False, "error": None,
+                      "started_at": time.time()}
+    t = threading.Thread(target=_run_backfill, args=(jid,), daemon=True)
+    t.start()
+    return jsonify({"job_id": jid})
+
+
 @app.post("/api/buzzer")
 def buzzer():
     jid = uuid.uuid4().hex[:12]

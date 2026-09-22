@@ -406,6 +406,32 @@ def describe_all(statuses: list[str] = None):
     print(f"Ergebnis: {success} beschrieben, {failed} fehlgeschlagen.")
 
 
+def get_missing_descriptions():
+    """Alle READY-Assets ohne Beschreibung (vom verwaisten Buzzer-Lauf)."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, filename, filepath, asset_type, status FROM assets "
+        "WHERE status = 'READY_FOR_RELEASE' "
+        "AND (description IS NULL OR description = '') "
+        "ORDER BY id"
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+
+def save_backfill(asset_id: int, description: str, tags: list[str]):
+    """Speichert Beschreibung + Tags, lässt Status/Release unberührt."""
+    conn = get_connection()
+    conn.execute(
+        "UPDATE assets SET description = ?, tags = ? WHERE id = ?",
+        (description, ", ".join(tags), asset_id)
+    )
+    conn.commit()
+    conn.close()
+
+
 def describe_single(asset_id: int):
     """Beschreibt ein einzelnes Asset anhand seiner ID."""
     conn = get_connection()

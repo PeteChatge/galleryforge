@@ -99,6 +99,10 @@ pre.log{background:#04060c;border:1px solid var(--line);border-radius:12px;paddi
   <div class="row" style="margin-top:10px">
     <button class="s" id="reload">↻ Aktualisieren</button>
   </div>
+  <div class="row" style="margin-top:10px">
+    <span class="meta" id="missInfo" style="flex:1"></span>
+    <button class="s ed" id="backfill" style="flex:0 0 220px">Beschreibungen nachholen</button>
+  </div>
 </div>
 
 <div class="panel">
@@ -142,7 +146,13 @@ async function api(path,opt={}){
   return r;
 }
 function short(s,n=34){s=s||"";return s.length>n?s.slice(0,n-1)+"…":s;}
-async function boot(){await Promise.all([loadStats(),loadAssets(),loadRels(),loadLogs()]).catch(()=>{});}
+async function boot(){await Promise.all([loadStats(),loadMissing(),loadAssets(),loadRels(),loadLogs()]).catch(()=>{});}
+async function loadMissing(){
+  try{ const r=await api("/api/missing"); const j=await r.json();
+    $("missInfo").textContent=j.missing?`${j.missing} ohne Beschreibung`:"Alle haben Beschreibungen.";
+    $("backfill").style.display=j.missing?"":"none";
+  }catch(e){}
+}
 async function loadStats(){
   const r=await api("/api/stats"); const j=await r.json();
   $("dot").classList.toggle("off",false);
@@ -193,24 +203,41 @@ async function loadLogs(){
   try{ const r=await api("/api/logs?lines=80"); const j=await r.json(); $("logs").textContent=j.lines.join("\n"); }catch(e){}
 }
 let polling=null;
+function pollJob(job_id,busyBtn,busyLabel,doneLabel){
+  if(polling) clearInterval(polling);
+  polling=setInterval(async()=>{
+    try{
+      const jr=await api(`/api/job/${job_id}`); const j=await jr.json();
+      const pct=j.total?Math.round(100*j.current/j.total):0;
+      const overall=Math.round(100*((j.step_idx-1)+pct/100)/j.steps.length);
+      $("fill").style.width=overall+"%";
+      $("step").innerHTML=`<b>${short(j.step,18)}</b> · ${j.current}/${j.total} · ${short(j.msg,70)}`;
+      $("joblog").textContent=j.log.slice(-40).join("\n"); $("joblog").scrollTop=1e6;
+      if(j.done){ clearInterval(polling); polling=null;
+        $("buzz").disabled=false; $("buzz").classList.remove("live"); $("buzz").textContent="▶ BUZZERN";
+        $("backfill").disabled=false; boot();
+        $("step").innerHTML=j.error?`Fehler: ${short(j.error,90)}`:doneLabel; }
+    }catch(e){ clearInterval(polling); polling=null;
+      $("buzz").disabled=false; $("buzz").classList.remove("live"); $("buzz").textContent="▶ BUZZERN";
+      $("backfill").disabled=false; }
+  },2000);
+}
 $("buzz").onclick=async()=>{
-  const b=$("buzz"); b.disabled=true; b.classList.add("live"); b.textContent="⏳ LÄUFT …";
+  const b=$("buzz"); b.disabled=true; $("backfill").disabled=true;
+  b.classList.add("live"); b.textContent="⏳ LÄUFT …";
   $("joblog").textContent="";
   try{
     const r=await api("/api/buzzer",{method:"POST"}); const {job_id}=await r.json();
-    polling=setInterval(async()=>{
-      try{
-        const jr=await api(`/api/job/${job_id}`); const j=await jr.json();
-        const pct=j.total?Math.round(100*j.current/j.total):0;
-        const overall=Math.round(100*((j.step_idx-1)+pct/100)/j.steps.length);
-        $("fill").style.width=overall+"%";
-        $("step").innerHTML=`<b>${short(j.step,18)}</b> · ${j.current}/${j.total} · ${short(j.msg,70)}`;
-        $("joblog").textContent=j.log.slice(-40).join("\n"); $("joblog").scrollTop=1e6;
-        if(j.done){ clearInterval(polling); b.disabled=false; b.classList.remove("live"); b.textContent="▶ BUZZERN"; boot();
-          $("step").innerHTML=j.error?`Fehler: ${short(j.error,90)}`:"Fertig. Stats/Galerien aktualisiert."; }
-      }catch(e){ clearInterval(polling); b.disabled=false; b.classList.remove("live"); b.textContent="▶ BUZZERN"; }
-    },2000);
-  }catch(e){ b.disabled=false; b.classList.remove("live"); b.textContent="▶ BUZZERN"; }
+    pollJob(job_id,b,"⏳ LÄUFT …","Fertig. Stats/Galerien aktualisiert.");
+  }catch(e){ b.disabled=false; $("backfill").disabled=false; b.classList.remove("live"); b.textContent="▶ BUZZERN"; }
+};
+$("backfill").onclick=async()=>{
+  const b=$("backfill"); b.disabled=true; $("buzz").disabled=true;
+  $("buzz").classList.add("live"); $("buzz").textContent="⏳ HOLT NACH …";
+  try{
+    const r=await api("/api/backfill",{method:"POST"}); const {job_id}=await r.json();
+    pollJob(job_id,b,"⏳ HOLT NACH …","Nachholen fertig.");
+  }catch(e){ b.disabled=false; $("buzz").disabled=false; $("buzz").classList.remove("live"); $("buzz").textContent="▶ BUZZERN"; }
 };
 boot(); setInterval(loadLogs,15000);
 </script>
