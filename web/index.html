@@ -152,8 +152,9 @@ function short(s,n=34){s=s||"";return s.length>n?s.slice(0,n-1)+"…":s;}
 async function boot(){await Promise.all([loadStats(),loadMissing(),loadAssets(),loadRels(),loadLogs()]).catch(()=>{});}
 async function loadMissing(){
   try{ const r=await api("/api/missing"); const j=await r.json();
-    $("missInfo").textContent=j.missing?`${j.missing} ohne Beschreibung`:"Alle haben Beschreibungen.";
-    $("backfill").style.display=j.missing?"":"none";
+    const mi=maybe("missInfo"), bb=maybe("backfill");
+    if(mi) mi.textContent=j.missing?`${j.missing} ohne Beschreibung`:"Alle haben Beschreibungen.";
+    if(bb) bb.style.display=j.missing?"":"none";
   }catch(e){}
 }
 async function loadStats(){
@@ -206,6 +207,13 @@ async function loadLogs(){
   try{ const r=await api("/api/logs?lines=80"); const j=await r.json(); $("logs").textContent=j.lines.join("\n"); }catch(e){}
 }
 let polling=null;
+const maybe=id=>document.getElementById(id);
+function lockAll(lock){
+  $("buzz").disabled=lock;
+  const bf=maybe("backfill"), rb=maybe("rebuild");
+  if(bf) bf.disabled=lock;
+  if(rb) rb.disabled=lock;
+}
 function pollJob(job_id,busyBtn,busyLabel,doneLabel){
   if(polling) clearInterval(polling);
   polling=setInterval(async()=>{
@@ -218,37 +226,37 @@ function pollJob(job_id,busyBtn,busyLabel,doneLabel){
       $("joblog").textContent=j.log.slice(-40).join("\n"); $("joblog").scrollTop=1e6;
       if(j.done){ clearInterval(polling); polling=null;
         $("buzz").disabled=false; $("buzz").classList.remove("live"); $("buzz").textContent="▶ BUZZERN";
-        $("backfill").disabled=false; $("rebuild").disabled=false; boot();
+        lockAll(false); boot();
         $("step").innerHTML=j.error?`Fehler: ${short(j.error,90)}`:doneLabel; }
     }catch(e){ clearInterval(polling); polling=null;
       $("buzz").disabled=false; $("buzz").classList.remove("live"); $("buzz").textContent="▶ BUZZERN";
-      $("backfill").disabled=false; $("rebuild").disabled=false; }
+      lockAll(false); }
   },2000);
 }
 $("buzz").onclick=async()=>{
-  const b=$("buzz"); b.disabled=true; $("backfill").disabled=true;
+  const b=$("buzz"); b.disabled=true; lockAll(true); b.disabled=true;
   b.classList.add("live"); b.textContent="⏳ LÄUFT …";
   $("joblog").textContent="";
   try{
     const r=await api("/api/buzzer",{method:"POST"}); const {job_id}=await r.json();
     pollJob(job_id,b,"⏳ LÄUFT …","Fertig. Stats/Galerien aktualisiert.");
-  }catch(e){ b.disabled=false; $("backfill").disabled=false; b.classList.remove("live"); b.textContent="▶ BUZZERN"; }
+  }catch(e){ lockAll(false); b.classList.remove("live"); b.textContent="▶ BUZZERN"; }
 };
-$("backfill").onclick=async()=>{
-  const b=$("backfill"); b.disabled=true; $("buzz").disabled=true; $("rebuild").disabled=true;
+if(maybe("backfill")) $("backfill").onclick=async()=>{
+  lockAll(true);
   $("buzz").classList.add("live"); $("buzz").textContent="⏳ HOLT NACH …";
   try{
     const r=await api("/api/backfill",{method:"POST"}); const {job_id}=await r.json();
     pollJob(job_id,b,"⏳ HOLT NACH …","Nachholen fertig.");
-  }catch(e){ b.disabled=false; $("buzz").disabled=false; $("rebuild").disabled=false; $("buzz").classList.remove("live"); $("buzz").textContent="▶ BUZZERN"; }
+  }catch(e){ lockAll(false); $("buzz").classList.remove("live"); $("buzz").textContent="▶ BUZZERN"; }
 };
-$("rebuild").onclick=async()=>{
-  const b=$("rebuild"); b.disabled=true; $("buzz").disabled=true; $("backfill").disabled=true;
+if(maybe("rebuild")) $("rebuild").onclick=async()=>{
+  lockAll(true);
   $("buzz").classList.add("live"); $("buzz").textContent="⏳ BAUT …";
   try{
     const r=await api("/api/rebuild",{method:"POST"}); const {job_id}=await r.json();
-    pollJob(job_id,b,"⏳ BAUT …","Galerien neu gebaut.");
-  }catch(e){ b.disabled=false; $("buzz").disabled=false; $("backfill").disabled=false; $("buzz").classList.remove("live"); $("buzz").textContent="▶ BUZZERN"; }
+    pollJob(job_id,null,"⏳ BAUT …","Galerien neu gebaut.");
+  }catch(e){ lockAll(false); $("buzz").classList.remove("live"); $("buzz").textContent="▶ BUZZERN"; }
 };
 boot(); setInterval(loadLogs,15000);
 </script>
