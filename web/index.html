@@ -103,6 +103,8 @@ pre.log{background:#04060c;border:1px solid var(--line);border-radius:12px;paddi
     <span class="meta" id="missInfo" style="flex:1"></span>
     <button class="s ed" id="backfill" style="flex:0 0 220px">Beschreibungen nachholen</button>
   </div>
+  <div class="bar"><i id="bfill"></i></div>
+  <div class="step" id="bstep">Noch nichts nachgeholt.</div>
 </div>
 
 <div class="panel">
@@ -223,6 +225,11 @@ function pollJob(job_id,busyBtn,busyLabel,doneLabel){
       const overall=Math.round(100*((j.step_idx-1)+pct/100)/j.steps.length);
       $("fill").style.width=overall+"%";
       $("step").innerHTML=`<b>${short(j.step,18)}</b> · ${j.current}/${j.total} · ${short(j.msg,70)}`;
+      const bf=maybe("bfill"), bs=maybe("bstep");
+      if(bf&&bs&&j.steps.length===1&&j.steps[0]==="nachholen"){
+        bf.style.width=pct+"%";
+        bs.innerHTML=`<b>${j.current}/${j.total}</b> · ${short(j.msg,70)}`;
+      }
       $("joblog").textContent=j.log.slice(-40).join("\n"); $("joblog").scrollTop=1e6;
       if(j.done){ clearInterval(polling); polling=null;
         $("buzz").disabled=false; $("buzz").classList.remove("live"); $("buzz").textContent="▶ BUZZERN";
@@ -245,6 +252,9 @@ $("buzz").onclick=async()=>{
 if(maybe("backfill")) $("backfill").onclick=async()=>{
   lockAll(true);
   $("buzz").classList.add("live"); $("buzz").textContent="⏳ HOLT NACH …";
+  const bf=maybe("bfill"), bs=maybe("bstep");
+  if(bf) bf.style.width="0%";
+  if(bs) bs.textContent="Start …";
   try{
     const r=await api("/api/backfill",{method:"POST"}); const {job_id}=await r.json();
     pollJob(job_id,b,"⏳ HOLT NACH …","Nachholen fertig.");
