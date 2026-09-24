@@ -228,7 +228,14 @@ function pollJob(job_id,busyBtn,busyLabel,doneLabel){
       const bf=maybe("bfill"), bs=maybe("bstep");
       if(bf&&bs&&j.steps.length===1&&j.steps[0]==="nachholen"){
         bf.style.width=pct+"%";
-        bs.innerHTML=`<b>${j.current}/${j.total}</b> · ${short(j.msg,70)}`;
+        let eta="…";
+        const el=(Date.now()/1000)-(j.started_at||Date.now()/1000);
+        if(j.current>0&&el>5){
+          const rest=(j.total-j.current)*(el/j.current);
+          const h=Math.floor(rest/3600), m=Math.round((rest%3600)/60);
+          eta=h>0?`~${h} Std. ${m} Min. Rest`:`~${m} Min. Rest`;
+        }
+        bs.innerHTML=`<b>${j.current}/${j.total} (${pct} %)</b> · ${short(j.msg,46)} · ${eta}`;
       }
       $("joblog").textContent=j.log.slice(-40).join("\n"); $("joblog").scrollTop=1e6;
       if(j.done){ clearInterval(polling); polling=null;
