@@ -126,6 +126,28 @@ def encode_image_b64(path: Path) -> str:
     return base64.b64encode(path.read_bytes()).decode("utf-8")
 
 
+def encode_preview_b64(path: Path, max_dim: int = 1024) -> str | None:
+    """Verkleinerte JPEG-Vorschau für Vision (Riesenbilder würden sonst den
+    Request sprengen oder ewig dauern). Fürs Taggen reicht 1024 px locker."""
+    try:
+        import io as _io
+
+        from PIL import Image as _Image
+
+        with _Image.open(path) as img:
+            img = img.convert("RGB")
+            img.thumbnail((max_dim, max_dim))
+            buf = _io.BytesIO()
+            img.save(buf, format="JPEG", quality=85)
+            return base64.b64encode(buf.getvalue()).decode("utf-8")
+    except Exception as e:
+        print(f"  WARNUNG: Vorschaubau fehlgeschlagen ({type(e).__name__}), nutze Original.")
+        try:
+            return encode_image_b64(path)
+        except Exception:
+            return None
+
+
 def extract_video_frames(filepath: str, interval: int = FRAME_INTERVAL,
                           max_frames: int = MAX_FRAMES) -> list[Path]:
     """Extrahiert per ffmpeg jeden N-ten Frame in ein Temp-Verzeichnis."""
@@ -307,14 +329,24 @@ def describe_asset(filepath: str, filename: str, asset_type: str) -> tuple[str, 
                 print("  → Keine Frames extrahiert, überspringe.")
                 return None
             cleanup_dir = frame_paths[0].parent
-            images_b64 = [encode_image_b64(p) for p in frame_paths]
-            vision_prompt = VISION_USER_PROMPT_VIDEO.format(n=len(frame_paths))
+            images_b64 = []
+            for p in frame_paths:
+                b = encode_preview_b64(p)
+                if b:
+                    images_b64.append(b)
+            if not images_b64:
+                print("  → Keine Frames lesbar, überspringe.")
+                return None
+            vision_prompt = VISION_USER_PROMPT_VIDEO.format(n=len(images_b64))
         else:
             src = Path(filepath)
             if not src.exists():
                 print(f"  FEHLER: Datei nicht gefunden: {filepath}")
                 return None
-            images_b64 = [encode_image_b64(src)]
+            b = encode_preview_b64(src)
+            if not b:
+                return None
+            images_b64 = [b]
             vision_prompt = VISION_USER_PROMPT_IMAGE
 
         # Stufe 1: Vision (Ollama) -> Rohbeschreibung
