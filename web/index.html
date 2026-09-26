@@ -151,7 +151,32 @@ async function api(path,opt={}){
   return r;
 }
 function short(s,n=34){s=s||"";return s.length>n?s.slice(0,n-1)+"…":s;}
-async function boot(){await Promise.all([loadStats(),loadMissing(),loadAssets(),loadRels(),loadLogs()]).catch(()=>{});}
+async function boot(){await Promise.all([loadStats(),loadMissing(),loadAssets(),loadRels(),loadLogs()]).catch(()=>{});reattach();}
+/* Heartbeat: nach Reload an laufenden Job wieder andocken */
+async function reattach(){
+  try{
+    const r=await api("/api/jobs"); const jobs=await r.json();
+    const ids=Object.keys(jobs).filter(id=>!jobs[id].done);
+    if(!ids.length) return;
+    ids.sort((a,b)=>(jobs[b].updated_at||0)-(jobs[a].updated_at||0));
+    const jid=ids[0], j=jobs[jid];
+    const kind=(j.steps&&j.steps[0])||"";
+    lockAll(true);
+    $("buzz").classList.add("live");
+    const bstep=maybe("bstep");
+    if(kind==="nachholen"){
+      $("buzz").textContent="⏳ HOLT NACH …";
+      if(bstep) bstep.textContent="Wieder angedockt …";
+      pollJob(jid,null,"⏳ HOLT NACH …","Nachholen fertig.");
+    }else if(kind==="rebuild"){
+      $("buzz").textContent="⏳ BAUT …";
+      pollJob(jid,null,"⏳ BAUT …","Galerien neu gebaut.");
+    }else{
+      $("buzz").textContent="⏳ LÄUFT …";
+      pollJob(jid,null,"⏳ LÄUFT …","Fertig. Stats/Galerien aktualisiert.");
+    }
+  }catch(e){}
+}
 async function loadMissing(){
   try{ const r=await api("/api/missing"); const j=await r.json();
     const mi=maybe("missInfo"), bb=maybe("backfill");
@@ -244,7 +269,10 @@ function pollJob(job_id,busyBtn,busyLabel,doneLabel){
         $("step").innerHTML=j.error?`Fehler: ${short(j.error,90)}`:doneLabel; }
     }catch(e){ clearInterval(polling); polling=null;
       $("buzz").disabled=false; $("buzz").classList.remove("live"); $("buzz").textContent="▶ BUZZERN";
-      lockAll(false); }
+      lockAll(false);
+      $("step").textContent="Job-Kontakt verloren (Server-Neustart?) – Seite neu laden, Zähler prüfen, ggf. erneut starten.";
+      const bs=maybe("bstep"); if(bs) bs.textContent="Job-Kontakt verloren – ggf. erneut starten.";
+      boot(); }
   },2000);
 }
 $("buzz").onclick=async()=>{
