@@ -6,3 +6,6 @@ sqlalchemy
 rich
 typer
 python-dotenv
+flask
+flask-cors
+fpdf2

@@ -129,6 +129,10 @@ pre.log{background:#04060c;border:1px solid var(--line);border-radius:12px;paddi
   <h2>Wochen-Galerien</h2>
   <div class="row" style="margin-bottom:8px">
     <button class="s ed" id="rebuild" style="flex:0 0 200px">Galerien neu bauen</button>
+    <select id="exTheme" style="flex:0 0 130px" title="Export-Theme">
+      <option value="dark">dunkel</option>
+      <option value="light">hell</option>
+    </select>
   </div>
   <div id="rels"></div>
 </div>
@@ -171,6 +175,9 @@ async function reattach(){
     }else if(kind==="rebuild"){
       $("buzz").textContent="⏳ BAUT …";
       pollJob(jid,null,"⏳ BAUT …","Galerien neu gebaut.");
+    }else if(kind==="export"){
+      $("buzz").textContent="⏳ EXPORTIERT …";
+      pollJob(jid,null,"⏳ EXPORTIERT …","Export fertig.");
     }else{
       $("buzz").textContent="⏳ LÄUFT …";
       pollJob(jid,null,"⏳ LÄUFT …","Fertig. Stats/Galerien aktualisiert.");
@@ -228,7 +235,22 @@ $("fStatus").onchange=()=>{page=1;loadAssets();};
 let qT; $("fQ").oninput=()=>{clearTimeout(qT);qT=setTimeout(()=>{page=1;loadAssets();},350);};
 async function loadRels(){
   const r=await api("/api/releases"); const j=await r.json();
-  $("rels").innerHTML=j.releases.map(x=>`<div class="rel"><a href="/releases/${x.id}/index.html?token=${encodeURIComponent(tokStore.get())}" target="_blank">${x.id}</a><span>${x.assets} Assets${x.has_index?"":" · kein index"}</span></div>`).join("")||'<div class="meta">Noch keine Releases.</div>';
+  const th=(maybe("exTheme")&&maybe("exTheme").value)||"dark";
+  $("rels").innerHTML=j.releases.map(x=>{
+    const ex=(x.exports||[]).map(f=>`<a href="/releases/${x.id}/${f}?token=${encodeURIComponent(tokStore.get())}" target="_blank">${short(f.split("/").pop(),22)}</a>`).join(" · ")||'<span class="meta">keine Exporte</span>';
+    return `<div class="rel"><a href="/releases/${x.id}/index.html?token=${encodeURIComponent(tokStore.get())}" target="_blank">${x.id}</a><span>${x.assets} Assets${x.has_index?"":" · kein index"}</span></div>
+    <div class="abtns"><button class="s ed" onclick="doExport('${x.id}','monolith')">Mono</button><button class="s ed" onclick="doExport('${x.id}','traditional')">HTML</button><button class="s ed" onclick="doExport('${x.id}','pdf')">PDF</button><span class="meta">${ex}</span></div>`;
+  }).join("")||'<div class="meta">Noch keine Releases.</div>';
+}
+async function doExport(rid,fmt){
+  const th=(maybe("exTheme")&&maybe("exTheme").value)||"dark";
+  lockAll(true);
+  $("buzz").classList.add("live"); $("buzz").textContent="⏳ EXPORTIERT …";
+  try{
+    const r=await api("/api/export",{method:"POST",body:JSON.stringify({release_id:rid,format:fmt,theme:th})});
+    const {job_id}=await r.json();
+    pollJob(job_id,null,"⏳ EXPORTIERT …","Export fertig.");
+  }catch(e){ lockAll(false); $("buzz").classList.remove("live"); $("buzz").textContent="▶ BUZZERN"; }
 }
 async function loadLogs(){
   try{ const r=await api("/api/logs?lines=80"); const j=await r.json(); $("logs").textContent=j.lines.join("\n"); }catch(e){}

@@ -362,11 +362,22 @@ def releases():
                     info = _j.loads(rj.read_text(encoding="utf-8"))
                 except Exception:
                     info = {}
+            exports = []
+            for f in sorted(sub.iterdir()):
+                if f.is_file() and (
+                    (f.name.startswith("gallery-") and f.suffix == ".html")
+                    or (f.name.startswith("Release-") and f.suffix == ".pdf")
+                ):
+                    exports.append(f.name)
+            for d in sorted(sub.iterdir()):
+                if d.is_dir() and d.name.startswith("html-") and (d / "index.html").exists():
+                    exports.append(d.name + "/index.html")
             out.append(
                 {
                     "id": sub.name,
                     "assets": info.get("asset_count", len(info.get("assets", []))),
                     "has_index": (sub / "index.html").exists(),
+                    "exports": exports,
                 }
             )
     return jsonify({"releases": out})
@@ -701,6 +712,59 @@ def jobs_list():
                 for jid, j in jobs.items()
             }
         )
+
+
+def _run_export(jid, release_id, fmt, theme):
+    from core import exporter as _ex
+
+    steps = ["export"]
+    try:
+        fn = _ex.FORMATS.get(fmt)
+        if not fn:
+            raise ValueError(f"Unbekanntes Format: {fmt}")
+        data = _ex._release_data(release_id)
+        assets = data.get("assets", [])
+        total = max(1, len(assets))
+        done = {"n": 0}
+
+        def progress(a):
+            done["n"] += 1
+            _job_update(jid, step="export", step_idx=1, steps=steps,
+                         current=done["n"], total=total,
+                         msg=f"Exportiere {fmt}/{theme}: {a.get('filename', '')} ({done['n']}/{total})")
+
+        _job_update(jid, step="export", step_idx=1, steps=steps,
+                     current=0, total=total,
+                     msg=f"Starte Export {fmt}/{theme} für {release_id} ...")
+        out = _call_quiet(jid, fn, release_id, theme, progress)
+        rel = str(out.relative_to(RELEASES_DIR)).replace("\\", "/")
+        _job_update(jid, done=True, current=1, total=1, result=rel,
+                     msg=f"Export fertig: {rel}")
+    except Exception as e:
+        _job_update(jid, done=True, error=f"{type(e).__name__}: {e}",
+                     msg=f"ABBRUCH: {e}")
+
+
+@app.post("/api/export")
+def export():
+    data = request.get_json(force=True, silent=True) or {}
+    release_id = str(data.get("release_id", "")).strip()
+    fmt = str(data.get("format", "")).strip()
+    theme = str(data.get("theme", "dark")).strip()
+    if not release_id or fmt not in ("monolith", "traditional", "pdf"):
+        return jsonify({"error": "release_id + format (monolith/traditional/pdf) nötig"}), 400
+    if theme not in ("dark", "light"):
+        theme = "dark"
+    jid = uuid.uuid4().hex[:12]
+    with jlock:
+        jobs[jid] = {"step": "start", "step_idx": 0,
+                      "steps": ["export"],
+                      "current": 0, "total": 1, "msg": "Start ...",
+                      "log": [], "done": False, "error": None, "result": None,
+                      "started_at": time.time()}
+    t = threading.Thread(target=_run_export, args=(jid, release_id, fmt, theme), daemon=True)
+    t.start()
+    return jsonify({"job_id": jid})
 
 
 @app.get("/api/job/<jid>")
