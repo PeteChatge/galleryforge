@@ -62,62 +62,100 @@ def _thumb_b64(release_id: str, rel: str) -> str:
     return f"data:{mime};base64," + base64.b64encode(p.read_bytes()).decode()
 
 
-def _css(t: dict) -> str:
-    return f"""*{{
+def _css(_t=None) -> str:
+    return """*{
   box-sizing:border-box;
-}}
-html{{
-  background:{t['page']};
-}}
-body{{
+}
+:root{
+  --page:#070a12;--card:#101828;--text:#e8eefc;--dim:#8b98b8;
+  --accent:#00f0ff;--tag:#1e2a44;
+}
+[data-theme="light"]{
+  --page:#f4f6fb;--card:#ffffff;--text:#16213a;--dim:#5b6b8c;
+  --accent:#0077cc;--tag:#e3e9f5;
+}
+html{
+  background:var(--page);
+}
+body{
   margin:0;
   padding:28px 20px 60px;
-  background:{t['page']};
-  color:{t['text']};
+  background:var(--page);
+  color:var(--text);
   font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
-}}
-h1{{
+}
+h1{
   text-align:center;
-}}
-.sub{{
-  text-align:center;color:{t['dim']};margin-bottom:24px;
-}}
-.gallery{{
+}
+.sub{
+  text-align:center;color:var(--dim);margin-bottom:24px;
+}
+.gallery{
   display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px;
   max-width:1400px;margin:0 auto;
-}}
-.card{{
-  background:{t['card']};border-radius:12px;overflow:hidden;
+}
+.card{
+  background:var(--card);border-radius:12px;overflow:hidden;
   box-shadow:0 4px 18px rgba(0,0,0,.35);
-}}
-.card img,.card video{{
+}
+.card img,.card video{
   width:100%;display:block;background:#000;
-}}
-.card .tx{{
+}
+.card .tx{
   padding:10px 12px;
-}}
-.card .fn{{
+}
+.card .fn{
   font-weight:700;font-size:13px;word-break:break-all;
-}}
-.card .de{{
-  font-size:12.5px;color:{t['dim']};margin-top:6px;
-}}
-.card .tags{{
+}
+.card .de{
+  font-size:12.5px;color:var(--dim);margin-top:6px;
+}
+.card .tags{
   margin-top:8px;
-}}
-.tag{{
-  display:inline-block;background:{t['tag']};color:{t['text']};
+}
+.tag{
+  display:inline-block;background:var(--tag);color:var(--text);
   border-radius:12px;padding:2px 8px;margin:2px 4px 0 0;font-size:11px;
-}}
-a{{
-  color:{t['accent']};
-}}
-@media print{{
-  body{{
-    background:{t['page']} !important;
+}
+a{
+  color:var(--accent);
+}
+.theme-btn{
+  position:fixed;top:12px;right:12px;z-index:10;
+  border:1px solid var(--dim);background:var(--card);color:var(--text);
+  border-radius:99px;padding:8px 14px;font-size:13px;cursor:pointer;
+}
+@media print{
+  body{
+    background:var(--page) !important;
     -webkit-print-color-adjust:exact;print-color-adjust:exact;
-  }}
-}}"""
+  }
+  .theme-btn{display:none;}
+}"""
+
+THEME_JS = """<script>
+(function(){
+  try{
+    var saved=null;
+    try{saved=localStorage.getItem("gf-gallery-theme");}catch(e){}
+    if(saved)document.documentElement.setAttribute("data-theme",saved);
+  }catch(e){}
+  document.addEventListener("DOMContentLoaded",function(){
+    var b=document.getElementById("themeBtn");
+    if(!b)return;
+    function sync(){
+      b.textContent=document.documentElement.getAttribute("data-theme")==="light"?"dunkel":"hell";
+    }
+    b.addEventListener("click",function(){
+      var cur=document.documentElement.getAttribute("data-theme")==="light"?"dark":"light";
+      document.documentElement.setAttribute("data-theme",cur);
+      try{localStorage.setItem("gf-gallery-theme",cur);}catch(e){}
+      sync();
+    });
+    sync();
+  });
+})();
+</script>"""
 
 
 def _card_html(a: dict, thumb_src: str, img_href: str) -> str:
@@ -144,18 +182,18 @@ def _card_html(a: dict, thumb_src: str, img_href: str) -> str:
 
 
 def _page_html(release_id: str, assets: list, theme: str, thumb_fn, img_fn) -> str:
-    t = _theme(theme)
     cards = "\n".join(
         _card_html(a, thumb_fn(a), img_fn(a)) for a in assets
     )
     return (
-        "<!DOCTYPE html>\n<html lang=\"de\">\n<head>\n<meta charset=\"utf-8\">\n"
+        "<!DOCTYPE html>\n<html lang=\"de\" data-theme=\"" + theme + "\">\n<head>\n<meta charset=\"utf-8\">\n"
         f"<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n"
-        f"<title>Release {release_id} ({theme})</title>\n"
-        f"<style>\n{_css(t)}\n</style>\n</head>\n<body>\n"
+        f"<title>Release {release_id}</title>\n"
+        f"<style>\n{_css()}\n</style>\n</head>\n<body>\n"
+        "<button class=\"theme-btn\" id=\"themeBtn\" type=\"button\">hell</button>\n"
         f"<h1>Release {release_id}</h1>\n"
-        f"<div class=\"sub\">{len(assets)} Medien · Theme {theme}</div>\n"
-        f"<div class=\"gallery\">\n{cards}\n</div>\n</body>\n</html>"
+        f"<div class=\"sub\">{len(assets)} Medien</div>\n"
+        f"<div class=\"gallery\">\n{cards}\n</div>\n{THEME_JS}\n</body>\n</html>"
     )
 
 

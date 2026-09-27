@@ -129,10 +129,6 @@ pre.log{background:#04060c;border:1px solid var(--line);border-radius:12px;paddi
   <h2>Wochen-Galerien</h2>
   <div class="row" style="margin-bottom:8px">
     <button class="s ed" id="rebuild" style="flex:0 0 200px">Galerien neu bauen</button>
-    <select id="exTheme" style="flex:0 0 130px" title="Export-Theme">
-      <option value="dark">dunkel</option>
-      <option value="light">hell</option>
-    </select>
   </div>
   <div id="rels"></div>
 </div>
@@ -235,15 +231,17 @@ $("fStatus").onchange=()=>{page=1;loadAssets();};
 let qT; $("fQ").oninput=()=>{clearTimeout(qT);qT=setTimeout(()=>{page=1;loadAssets();},350);};
 async function loadRels(){
   const r=await api("/api/releases"); const j=await r.json();
-  const th=(maybe("exTheme")&&maybe("exTheme").value)||"dark";
   $("rels").innerHTML=j.releases.map(x=>{
     const ex=(x.exports||[]).map(f=>`<a href="/releases/${x.id}/${f}?token=${encodeURIComponent(tokStore.get())}" target="_blank">${short(f.split("/").pop(),22)}</a>`).join(" · ")||'<span class="meta">keine Exporte</span>';
+    const thsel=`<select id="th-${x.id}" style="flex:0 0 100px" title="Theme"><option value="dark">dunkel</option><option value="light">hell</option></select>`;
     return `<div class="rel"><a href="/releases/${x.id}/index.html?token=${encodeURIComponent(tokStore.get())}" target="_blank">${x.id}</a><span>${x.assets} Assets${x.has_index?"":" · kein index"}</span></div>
-    <div class="abtns"><button class="s ed" onclick="doExport('${x.id}','monolith')">Mono</button><button class="s ed" onclick="doExport('${x.id}','traditional')">HTML</button><button class="s ed" onclick="doExport('${x.id}','pdf')">PDF</button><span class="meta">${ex}</span></div>`;
+    <div class="abtns">${thsel}<button class="s ed" onclick="doExport('${x.id}','monolith')">Mono</button><button class="s ed" onclick="doExport('${x.id}','traditional')">HTML</button><button class="s ed" onclick="doExport('${x.id}','pdf')">PDF</button></div>
+    <div class="meta" style="margin:2px 0 8px">${ex}</div>`;
   }).join("")||'<div class="meta">Noch keine Releases.</div>';
 }
 async function doExport(rid,fmt){
-  const th=(maybe("exTheme")&&maybe("exTheme").value)||"dark";
+  const sel=document.getElementById("th-"+rid);
+  const th=(sel&&sel.value)||"dark";
   lockAll(true);
   $("buzz").classList.add("live"); $("buzz").textContent="⏳ EXPORTIERT …";
   try{
