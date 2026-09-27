@@ -251,15 +251,14 @@ def export_traditional(release_id: str, theme: str = "dark", progress=None) -> P
     return out / "index.html"
 
 
-def _win_uri(p: Path) -> str:
-    """file://-Link, Windows-lesbar (/mnt/d -> D:/)."""
+def _file_link(src_dir: Path, rel: str) -> str:
+    """Klick-Link aufs Original, relativ zum PDF-Ordner (portabel beim
+    Kopieren/Verschieben; absolute file:///D:/... funktionieren in vielen
+    Readern – v.a. Browser – gar nicht)."""
     from urllib.parse import quote
 
-    parts = p.parts
-    if len(parts) >= 3 and parts[0] == "/" and parts[1] == "mnt":
-        s = f"{parts[2].upper()}:/" + "/".join(parts[3:])
-        return "file:///" + quote(s, safe="/:")
-    return p.as_uri()
+    name = Path(rel).name
+    return "images/" + quote(name, safe="")
 
 
 def export_pdf(release_id: str, theme: str = "dark", progress=None) -> Path:
@@ -304,7 +303,7 @@ def export_pdf(release_id: str, theme: str = "dark", progress=None) -> Path:
         y0 = pdf.get_y()
         thumb = src_dir / a.get("thumbnail", "")
         orig = src_dir / a.get("image", "")
-        link = _win_uri(orig.resolve()) if orig.exists() else ""
+        link = _file_link(src_dir, a.get("image", "")) if orig.exists() else ""
         x_img, w_img = 12, 70
         if thumb.exists():
             try:
