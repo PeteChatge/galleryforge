@@ -165,6 +165,9 @@ def _card_html(a: dict, thumb_src: str, img_href: str) -> str:
         f'<span class="tag">{html_lib.escape(t)}</span>'
         for t in (a.get("tags") or [])
     )
+    # Token dran: Klicks aus Datei/Reader laufen ohne Login-Cookie
+    thumb_src = _with_token(thumb_src)
+    img_href = _with_token(img_href)
     if _is_video(a.get("filename", "")):
         media = (
             f'<video controls preload="none" poster="{thumb_src}">'
@@ -251,6 +254,32 @@ def export_traditional(release_id: str, theme: str = "dark", progress=None) -> P
     return out / "index.html"
 
 
+def _api_token() -> str:
+    """Server-Token für portable Export-Links (Klicks aus PDF/Reader haben
+    kein Login-Cookie dabei). Nur für lokale Archiv-Dateien."""
+    import os as _os
+
+    tok = _os.environ.get("GF_TOKEN", "")
+    if tok:
+        return tok
+    env = Path(__file__).resolve().parent.parent / ".env"
+    if env.exists():
+        for line in env.read_text().splitlines():
+            if line.startswith("GF_TOKEN="):
+                tok = line.split("=", 1)[1].strip().strip("\"'")
+                if tok:
+                    return tok
+    return ""
+
+
+def _with_token(url: str) -> str:
+    tok = _api_token()
+    if not tok or not url or url.startswith("data:"):
+        return url
+    sep = "&" if "?" in url else "?"
+    return f"{url}{sep}token={tok}"
+
+
 def _file_link(src_dir: Path, rel: str) -> str:
     """Klick-Link aufs Original, relativ zum PDF-Ordner (portabel beim
     Kopieren/Verschieben; absolute file:///D:/... funktionieren in vielen
@@ -303,7 +332,7 @@ def export_pdf(release_id: str, theme: str = "dark", progress=None) -> Path:
         y0 = pdf.get_y()
         thumb = src_dir / a.get("thumbnail", "")
         orig = src_dir / a.get("image", "")
-        link = _file_link(src_dir, a.get("image", "")) if orig.exists() else ""
+        link = _with_token(_file_link(src_dir, a.get("image", ""))) if orig.exists() else ""
         x_img, w_img = 12, 70
         if thumb.exists():
             try:
